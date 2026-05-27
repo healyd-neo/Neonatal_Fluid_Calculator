@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1e40af">
+  <title>Neonatal Nutritional Delivery Calculator</title>
+  <style>
+    :root {
+      --bg: #f0f4ff;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --border: #e2e8f0;
+      --primary: #2563eb;
+      --primary-light: #eff6ff;
+      --green: #059669;
+      --green-light: #ecfdf5;
+      --amber: #d97706;
+      --amber-light: #fffbeb;
+      --red: #dc2626;
+      --red-light: #fef2f2;
+      --purple: #7c3aed;
+      --purple-light: #f5f3ff;
+      --teal: #0891b2;
+      --teal-light: #ecfeff;
+      --text: #0f172a;
+      --text-2: #475569;
+      --text-3: #94a3b8;
+      --radius: 12px;
+      --radius-sm: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Roboto, 'Segoe UI', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+      padding-bottom: 84px;
+    }
+
+    /* HEADER */
+    .app-header {
+      background: linear-gradient(135deg, #1e40af 0%, #0891b2 100%);
+      color: #fff; padding: 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(30,64,175,0.25);
+    }
+    .app-header h1 { font-size: 17px; font-weight: 700; }
+    .app-header p { font-size: 11px; opacity: 0.8; margin-top: 2px; }
+    .btn-clear-hdr {
+      padding: 7px 14px; border-radius: 20px;
+      background: rgba(255,255,255,0.18); color: #fff;
+      border: none; font-size: 13px; font-weight: 600;
+      cursor: pointer; flex-shrink: 0;
+    }
+    .btn-clear-hdr:active { background: rgba(255,255,255,0.3); }
+
+    /* CONTENT */
+    .content { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+
+    /* CARDS */
+    .card { background: var(--surface); border-radius: var(--radius); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .card-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+    .card-icon { font-size: 18px; }
+    .card-header-text h2 { font-size: 14px; font-weight: 700; }
+    .card-header-text p { font-size: 11px; color: var(--text-2); margin-top: 1px; }
+    .card-body { padding: 14px 16px; }
+
+    /* FIELDS */
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 11px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.4px; }
+    .field input, .field select {
+      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      padding: 11px 12px; font-size: 16px; color: var(--text);
+      background: var(--surface); width: 100%;
+      -webkit-appearance: none; appearance: none;
+    }
+    .field input:focus, .field select:focus { outline: none; border-color: var(--primary); }
+    .field .hint { font-size: 11px; color: var(--text-3); }
+
+    /* PATIENT GRID */
+    .patient-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .field-full { grid-column: span 2; }
+
+    /* GUIDANCE */
+    .stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .stat-box { background: var(--surface-2); border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
+    .stat-label { font-size: 10px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 3px; }
+    .stat-value { font-size: 20px; font-weight: 800; line-height: 1.1; }
+    .stat-unit { font-size: 11px; color: var(--text-2); margin-top: 2px; }
+    .stat-source { font-size: 10px; color: var(--text-3); font-style: italic; margin-top: 3px; }
+    .stat-blue  { border-color: #93c5fd; background: var(--primary-light); }
+    .stat-blue  .stat-value { color: var(--primary); }
+    .stat-green { border-color: #6ee7b7; background: var(--green-light); }
+    .stat-green .stat-value { color: var(--green); }
+    .stat-amber { border-color: #fcd34d; background: var(--amber-light); }
+    .stat-amber .stat-value { color: var(--amber); }
+    .stat-red   { border-color: #fca5a5; background: var(--red-light); }
+    .stat-red   .stat-value { color: var(--red); }
+    .stat-wide  { grid-column: span 2; }
+    .guidance-bar { background: var(--surface-2); border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
+    .g-row { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; gap: 8px; }
+    .g-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .g-label { color: var(--text-2); flex: 1; }
+    .g-value { font-weight: 700; text-align: right; flex-shrink: 0; }
+    .status-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 16px; font-size: 11px; font-weight: 700; }
+    .pill-green { background: var(--green-light); color: var(--green); }
+    .pill-amber { background: var(--amber-light); color: var(--amber); }
+    .pill-red   { background: var(--red-light); color: var(--red); }
+    .guidance-placeholder { padding: 20px 16px; text-align: center; color: var(--text-3); font-size: 13px; }
+
+    /* INFUSIONS */
+    .infusion-card { border: 1.5px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; overflow: hidden; }
+    .infusion-card.cat-pn     { border-left: 4px solid var(--primary); }
+    .infusion-card.cat-lipid  { border-left: 4px solid var(--amber); }
+    .infusion-card.cat-fluid  { border-left: 4px solid var(--teal); }
+    .infusion-card.cat-milk   { border-left: 4px solid #db2777; }
+    .infusion-card.cat-custom { border-left: 4px solid var(--purple); }
+    .infusion-header { padding: 10px 12px; background: var(--surface); }
+    .inf-vol-row { display: flex; gap: 8px; align-items: flex-end; margin-top: 10px; }
+    .inf-vol-field { flex: 0 0 90px; }
+    .unit-toggle { display: flex; border-radius: 8px; overflow: hidden; border: 1.5px solid var(--border); flex-shrink: 0; }
+    .unit-btn { padding: 9px 10px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: var(--surface); color: var(--text-2); }
+    .unit-btn.active { background: var(--primary); color: #fff; }
+    .inf-remove { width: 38px; height: 38px; border-radius: 8px; border: none; background: var(--surface-2); color: var(--text-3); font-size: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+    .inf-remove:active { background: var(--red-light); color: var(--red); }
+    .conversion-hint { font-size: 11px; color: var(--text-3); padding: 2px 12px 6px; }
+    .custom-panel { display: none; padding: 10px 12px 12px; background: var(--purple-light); border-top: 1px dashed #c4b5fd; }
+    .custom-panel.show { display: block; }
+    .custom-panel-title { font-size: 10px; font-weight: 700; color: var(--purple); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .custom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .custom-kcal { margin-top: 8px; font-size: 12px; color: var(--purple); font-weight: 700; }
+
+    .btn-add {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 14px; border-radius: var(--radius-sm);
+      background: var(--primary); color: #fff;
+      border: none; font-size: 16px; font-weight: 700; cursor: pointer;
+      min-height: 52px; margin-top: 8px;
+    }
+    .btn-add:active { background: #1d4ed8; }
+
+    /* STICKY FOOTER */
+    .sticky-footer {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--surface); border-top: 1px solid var(--border);
+      padding: 10px 16px 12px; z-index: 100;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+    }
+    .footer-label { font-size: 10px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .footer-totals { display: grid; grid-template-columns: repeat(5,1fr); gap: 4px; }
+    .footer-stat { text-align: center; }
+    .fs-val { font-size: 16px; font-weight: 800; color: var(--text); line-height: 1; }
+    .fs-lab { font-size: 9px; color: var(--text-2); margin-top: 3px; }
+
+    /* RESULTS */
+    .results-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .results-table th { text-align: left; padding: 7px 8px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-2); background: var(--surface-2); border-bottom: 1px solid var(--border); }
+    .results-table td { padding: 8px; border-bottom: 1px solid var(--border); }
+    .results-table .total-row td { font-weight: 800; background: var(--primary-light); border-top: 2px solid var(--border); }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+    .badge-pn    { background: #dbeafe; color: #1d4ed8; }
+    .badge-lipid { background: #fef3c7; color: #92400e; }
+    .badge-fluid { background: #cffafe; color: #0e7490; }
+    .badge-milk  { background: #fce7f3; color: #9d174d; }
+    .badge-custom{ background: #ede9fe; color: #5b21b6; }
+
+    /* PANEL TOGGLES */
+    .panel-toggle {
+      width: 100%; padding: 12px 16px;
+      background: var(--surface-2); border: none; border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 13px; font-weight: 600; color: var(--text-2); cursor: pointer;
+    }
+    .panel-toggle:active { background: #e2e8f0; }
+    .panel-toggle.open .chevron { transform: rotate(180deg); }
+    .chevron { transition: transform 0.2s; font-size: 11px; }
+    .panel-content { display: none; padding: 14px 16px; border-top: 1px solid var(--border); }
+    .panel-content.show { display: block; }
+    .ref-section { margin-bottom: 12px; }
+    .ref-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; padding: 6px 0; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
+    .ref-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; border-bottom: 1px solid var(--border); }
+    .ref-row:last-child { border-bottom: none; }
+    .ref-row span:last-child { color: var(--text-2); }
+
+    .empty-state { text-align: center; padding: 28px 16px; color: var(--text-3); }
+    .empty-icon { font-size: 36px; margin-bottom: 10px; }
+
+    /* SAFETY WARNINGS */
+    .warning-box {
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+    .warn-red   { background: var(--red-light);   color: var(--red);   border: 1.5px solid #fca5a5; }
+    .warn-amber { background: var(--amber-light); color: var(--amber); border: 1.5px solid #fcd34d; }
+    .warn-hard  { flex-direction: column; gap: 10px; }
+    .warn-override-btn {
+      padding: 6px 14px; border-radius: 6px; border: 1.5px solid var(--red);
+      background: transparent; color: var(--red); font-size: 12px; font-weight: 700;
+      cursor: pointer; align-self: flex-start;
+    }
+    .warn-override-btn:active { background: var(--red); color: #fff; }
+  </style>
+</head>
+<body>
+
+<div class="app-header">
+  <div>
+    <h1>Neonatal Nutritional Delivery Calculator</h1>
+    <p>Fluid balance &amp; nutritional delivery guidance</p>
+  </div>
+  <button type="button" class="btn-clear-hdr" onclick="clearAll()">Clear All</button>
+</div>
+
+<div class="content">
+
+  <!-- PATIENT -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-icon">👶</span>
+      <div class="card-header-text">
+        <h2>Patient Details</h2>
+        <p>GA and urine output enable fluid balance guidance</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="patient-grid">
+        <div class="field">
+          <label>Gestation (wks)</label>
+          <input type="number" id="ga" inputmode="decimal" min="22" max="42" placeholder="e.g. 25" oninput="recalcAll()">
+        </div>
+        <div class="field">
+          <label>Birthweight (g)</label>
+          <input type="number" id="birthweight" inputmode="decimal" placeholder="e.g. 700" oninput="recalcAll()">
+        </div>
+        <div class="field">
+          <label>Current Weight (g)</label>
+          <input type="number" id="currentweight" inputmode="decimal" placeholder="optional" oninput="recalcAll()">
+        </div>
+        <div class="field">
+          <label>Day of Life</label>
+          <input type="number" id="dol" inputmode="numeric" placeholder="e.g. 1" oninput="recalcAll()">
+        </div>
+        <div class="field field-full">
+          <label>Urine Output</label>
+          <div class="unit-toggle" style="margin-bottom:6px;">
+            <button type="button" class="unit-btn active" id="uo-btn-kghr" onclick="setUOUnit('kghr')" style="flex:1">ml/kg/hr</button>
+            <button type="button" class="unit-btn" id="uo-btn-kgd" onclick="setUOUnit('kgd')" style="flex:1">ml/kg/day</button>
+          </div>
+          <input type="number" id="uo" inputmode="decimal" min="0" step="0.01" placeholder="e.g. 4" oninput="recalcAll()">
+          <span class="hint" id="uo-hint">Normal range: 1–5 ml/kg/hr</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GUIDANCE -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-icon">⚖️</span>
+      <div class="card-header-text">
+        <h2>Fluid Balance Guidance</h2>
+        <p>Target 2–3%/day weight loss · 85% incubator humidity</p>
+      </div>
+    </div>
+    <div class="card-body" id="guidance-body">
+      <div class="guidance-placeholder">Enter gestational age &amp; urine output above</div>
+    </div>
+  </div>
+
+  <!-- INFUSIONS -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-icon">💉</span>
+      <div class="card-header-text">
+        <h2>Fluid Regimen</h2>
+        <p>Add all parenteral and enteral infusions</p>
+      </div>
+    </div>
+    <div class="card-body" style="padding-bottom:0">
+      <div id="infusion-list">
+        <div class="empty-state" id="empty-msg">
+          <div class="empty-icon">💧</div>
+          <p>Tap "Add Infusion" to begin</p>
+        </div>
+      </div>
+      <button type="button" class="btn-add" onclick="addInfusion()">＋ Add Infusion</button>
+    </div>
+
+    <button type="button" class="panel-toggle" id="bdown-toggle" onclick="togglePanel('bdown')">
+      <span>📋 Per-fluid breakdown</span>
+      <span class="chevron">▼</span>
+    </button>
+    <div class="panel-content" id="bdown-panel">
+      <div id="breakdown-table"><p style="font-size:13px;color:var(--text-3);">Add infusions to see breakdown</p></div>
+    </div>
+
+    <button type="button" class="panel-toggle" id="ref-toggle" onclick="togglePanel('ref')">
+      <span>📖 Fluid composition reference</span>
+      <span class="chevron">▼</span>
+    </button>
+    <div class="panel-content" id="ref-panel">
+      <div class="ref-section">
+        <div class="ref-title" style="color:#1d4ed8;">cSPN1 — Preterm Aqueous PN (per 100 ml)</div>
+        <div class="ref-row"><span>Amino acids</span><span>3.9 g</span></div>
+        <div class="ref-row"><span>Glucose</span><span>9.5 g</span></div>
+        <div class="ref-row"><span>Sodium</span><span>1.0 mmol</span></div>
+        <div class="ref-row"><span>Calories</span><span>47.9 kcal</span></div>
+      </div>
+      <div class="ref-section">
+        <div class="ref-title" style="color:#1d4ed8;">cSPN2 — Preterm Aqueous PN (per 100 ml)</div>
+        <div class="ref-row"><span>Amino acids</span><span>3.3 g</span></div>
+        <div class="ref-row"><span>Glucose</span><span>9.4 g</span></div>
+        <div class="ref-row"><span>Sodium</span><span>3.0 mmol</span></div>
+        <div class="ref-row"><span>Calories</span><span>45.16 kcal</span></div>
+      </div>
+      <div class="ref-section">
+        <div class="ref-title" style="color:#0e7490;">IWL at 85% humidity (ml/kg/day)</div>
+        <div class="ref-row"><span>22 weeks</span><span>~70</span></div>
+        <div class="ref-row"><span>23 weeks</span><span>~60</span></div>
+        <div class="ref-row"><span>24 weeks</span><span>~50</span></div>
+        <div class="ref-row"><span>25 weeks</span><span>~40</span></div>
+        <div class="ref-row"><span>26 weeks</span><span>~35</span></div>
+        <div class="ref-row"><span>27–28 weeks</span><span>~25–30</span></div>
+        <div class="ref-row"><span>29–30 weeks</span><span>~18–22</span></div>
+        <div class="ref-row"><span>&gt;30 weeks</span><span>~10–15</span></div>
+      </div>
+      <p style="font-size:10px;color:var(--text-3);margin-top:8px;">Ågren et al. 2022 · Dereddy et al. 2025 (interpolated to 85% RH)</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- STICKY FOOTER -->
+<div class="sticky-footer">
+  <div class="footer-label">Totals per kg per day</div>
+  <div class="footer-totals">
+    <div class="footer-stat"><div class="fs-val" id="ft-vol">—</div><div class="fs-lab">ml/kg/d</div></div>
+    <div class="footer-stat"><div class="fs-val" id="ft-na">—</div><div class="fs-lab">Na mmol</div></div>
+    <div class="footer-stat"><div class="fs-val" id="ft-glu">—</div><div class="fs-lab">Glu g</div></div>
+    <div class="footer-stat"><div class="fs-val" id="ft-gir">—</div><div class="fs-lab">GIR mg/min</div></div>
+    <div class="footer-stat"><div class="fs-val" id="ft-kcal">—</div><div class="fs-lab">kcal</div></div>
+  </div>
+</div>
+
+<script>
+var FLUIDS = {
+  cspn1:     { label:'cSPN1 — Preterm PN',       cat:'pn',    na:1.0,  glucose:9.5,  aa:3.9, fat:0,   kcal:47.9  },
+  cspn2:     { label:'cSPN2 — Preterm PN',       cat:'pn',    na:3.0,  glucose:9.4,  aa:3.3, fat:0,   kcal:45.16 },
+  smof20:    { label:'SMOF Lipid 20%',           cat:'lipid', na:0,    glucose:0,    aa:0,   fat:20,  kcal:200   },
+  d2_5:      { label:'Dextrose 2.5%',            cat:'fluid', na:0,    glucose:2.5,  aa:0,   fat:0,   kcal:8.5   },
+  d5:        { label:'Dextrose 5%',              cat:'fluid', na:0,    glucose:5.0,  aa:0,   fat:0,   kcal:17.0  },
+  d10:       { label:'Dextrose 10%',             cat:'fluid', na:0,    glucose:10.0, aa:0,   fat:0,   kcal:34.0  },
+  d12_5:     { label:'Dextrose 12.5%',           cat:'fluid', na:0,    glucose:12.5, aa:0,   fat:0,   kcal:42.5  },
+  d15:       { label:'Dextrose 15%',             cat:'fluid', na:0,    glucose:15.0, aa:0,   fat:0,   kcal:51.0  },
+  nacl09:    { label:'NaCl 0.9%',                cat:'fluid', na:15.4, glucose:0,    aa:0,   fat:0,   kcal:0     },
+  nacl045:   { label:'NaCl 0.45%',               cat:'fluid', na:7.7,  glucose:0,    aa:0,   fat:0,   kcal:0     },
+  nacl018:   { label:'NaCl 0.18%',               cat:'fluid', na:3.08, glucose:0,    aa:0,   fat:0,   kcal:0     },
+  hepsaline: { label:'Hep Saline (0.45% NaCl)',  cat:'fluid', na:7.7,  glucose:0,    aa:0,   fat:0,   kcal:0     },
+  d5_n09:    { label:'D5% + NaCl 0.9%',          cat:'fluid', na:15.4, glucose:5.0,  aa:0,   fat:0,   kcal:17.0  },
+  d5_n045:   { label:'D5% + NaCl 0.45%',         cat:'fluid', na:7.7,  glucose:5.0,  aa:0,   fat:0,   kcal:17.0  },
+  d5_n018:   { label:'D5% + NaCl 0.18%',         cat:'fluid', na:3.08, glucose:5.0,  aa:0,   fat:0,   kcal:17.0  },
+  d10_n09:   { label:'D10% + NaCl 0.9%',         cat:'fluid', na:15.4, glucose:10.0, aa:0,   fat:0,   kcal:34.0  },
+  d10_n045:  { label:'D10% + NaCl 0.45%',        cat:'fluid', na:7.7,  glucose:10.0, aa:0,   fat:0,   kcal:34.0  },
+  d10_n018:  { label:'D10% + NaCl 0.18%',        cat:'fluid', na:3.08, glucose:10.0, aa:0,   fat:0,   kcal:34.0  },
+  d2_5_n09:  { label:'D2.5% + NaCl 0.9%',        cat:'fluid', na:15.4, glucose:2.5,  aa:0,   fat:0,   kcal:8.5   },
+  d2_5_n045: { label:'D2.5% + NaCl 0.45%',       cat:'fluid', na:7.7,  glucose:2.5,  aa:0,   fat:0,   kcal:8.5   },
+  bm_maternal:      { label:'Maternal Breast Milk',             cat:'milk', na:0.7, glucose:7.0,  aa:1.1, fat:3.5, kcal:67 },
+  bm_donor:         { label:'Donor Breast Milk (pasteurised)',  cat:'milk', na:0.5, glucose:7.2,  aa:0.9, fat:3.2, kcal:63 },
+  bm_maternal_fort: { label:'Fortified Maternal Breast Milk',   cat:'milk', na:0.9, glucose:11.5, aa:2.0, fat:3.6, kcal:91 },
+  bm_donor_fort:    { label:'Fortified Donor Breast Milk',      cat:'milk', na:0.7, glucose:11.7, aa:1.8, fat:3.3, kcal:87 },
+  nutriprem1:       { label:'Nutriprem 1 (Cow & Gate)',         cat:'milk', na:1.5, glucose:8.9,  aa:2.6, fat:4.4, kcal:82 },
+  nutriprem2:       { label:'Nutriprem 2 (Cow & Gate)',         cat:'milk', na:1.0, glucose:7.7,  aa:1.9, fat:4.0, kcal:72 },
+  custom:           { label:'— Custom / Other —',     cat:'custom', na:0, glucose:0,    aa:0,   fat:0,   kcal:0  },
+};
+
+var IWL_85 = {22:70,23:60,24:50,25:40,26:35,27:30,28:25,29:22,30:20,31:18,32:15,33:12,34:10,35:8,36:7};
+function getIWL(ga) { var g=Math.round(ga); return g<=22?70:g>=36?7:(IWL_85[g]||20); }
+
+var infCount = 0;
+var uoUnit = 'kghr';
+var hardOverrides = new Set();
+
+function overrideWarning(key) { hardOverrides.add(key); recalcAll(); }
+
+function getBlendedIVGlucoseConc(rows) {
+  var tG=0, tV=0;
+  rows.forEach(function(r) {
+    if(r.fl.cat !== 'lipid' && r.fl.cat !== 'milk') { tG += r.fl.glucose*(r.vol/100); tV += r.vol; }
+  });
+  return tV===0 ? 0 : (tG/tV)*100;
+}
+
+function setUOUnit(unit) {
+  uoUnit = unit;
+  document.getElementById('uo-btn-kghr').className = 'unit-btn'+(unit==='kghr'?' active':'');
+  document.getElementById('uo-btn-kgd').className  = 'unit-btn'+(unit==='kgd'?' active':'');
+  var inp = document.getElementById('uo');
+  if(unit==='kghr') { inp.placeholder='e.g. 4'; inp.step='0.01'; document.getElementById('uo-hint').textContent='Normal range: 1–5 ml/kg/hr'; }
+  else { inp.placeholder='e.g. 100'; inp.step='0.1'; document.getElementById('uo-hint').textContent='Normal range: 24–120 ml/kg/day'; }
+  recalcAll();
+}
+
+function getUOKgDay() {
+  var val = parseFloat(document.getElementById('uo').value);
+  if(isNaN(val) || val<0) return NaN;
+  return uoUnit==='kghr' ? val*24 : val;
+}
+
+function safetyWarnings(uoKgDay, totalIntake, bw, cw, rows) {
+  rows = rows || [];
+  var w = [];
+  if(!isNaN(uoKgDay) && uoKgDay>=0) {
+    var hr = uoKgDay/24;
+    if(hr>10) w.push({lvl:'red', msg:'⛔ UO very high ('+hr.toFixed(1)+' ml/kg/hr) — verify before prescribing'});
+    else if(hr<0.5 && uoKgDay>0) w.push({lvl:'amber', msg:'⚠️ Low UO ('+hr.toFixed(2)+' ml/kg/hr) — may indicate oliguria'});
+  }
+  if(totalIntake>250) w.push({lvl:'red', msg:'⛔ Total intake '+totalIntake.toFixed(0)+' ml/kg/day exceeds 250 — verify regimen'});
+  else if(totalIntake>200) w.push({lvl:'amber', msg:'⚠️ Total intake '+totalIntake.toFixed(0)+' ml/kg/day exceeds 200 — review regimen'});
+  if(cw && bw) {
+    var pct = ((cw-bw)/bw)*100;
+    if(pct<-20) w.push({lvl:'red', msg:'⛔ Weight loss '+Math.abs(pct).toFixed(1)+'% — exceeds 20%; risk of severe dehydration'});
+    else if(pct<-15) w.push({lvl:'amber', msg:'⚠️ Weight loss '+Math.abs(pct).toFixed(1)+'% — exceeds 15%; review fluid management'});
+  }
+  var gc = getBlendedIVGlucoseConc(rows);
+  if(gc<=20) hardOverrides.delete('glucose_conc_hard');
+  var lv = rows.filter(function(r){return r.fl.cat==='lipid';}).reduce(function(s,r){return s+r.vol;},0);
+  if(lv<=18) hardOverrides.delete('lipid_vol_hard');
+  if(rows.length>0 && gc>0) {
+    if(gc>20 && !hardOverrides.has('glucose_conc_hard')) w.push({lvl:'red', msg:'⛔ Blended IV glucose '+gc.toFixed(1)+'% exceeds 20% — requires immediate clinical review', hard:true, key:'glucose_conc_hard'});
+    else if(gc>20) w.push({lvl:'red', msg:'⛔ Blended IV glucose '+gc.toFixed(1)+'% exceeds 20% [Override active — ensure clinical review documented]'});
+    else if(gc>15) w.push({lvl:'red', msg:'⛔ Blended IV glucose '+gc.toFixed(1)+'% is very high — verify central access confirmed'});
+    else if(gc>12.5) w.push({lvl:'amber', msg:'⚠️ Blended IV glucose '+gc.toFixed(1)+'% — central line required'});
+  }
+  if(lv>18 && !hardOverrides.has('lipid_vol_hard')) w.push({lvl:'red', msg:'⛔ Lipid volume '+lv.toFixed(1)+' ml/kg/day exceeds institutional maximum (18 ml/kg/day)', hard:true, key:'lipid_vol_hard'});
+  else if(lv>18) w.push({lvl:'red', msg:'⛔ Lipid volume '+lv.toFixed(1)+' ml/kg/day exceeds 18 ml/kg/day [Override active — ensure clinical review documented]'});
+  return w;
+}
+
+function buildOptions() {
+  var g = [
+    {label:'Parenteral Nutrition', keys:['cspn1','cspn2']},
+    {label:'Lipid', keys:['smof20']},
+    {label:'Dextrose', keys:['d2_5','d5','d10','d12_5','d15']},
+    {label:'Saline', keys:['nacl09','nacl045','nacl018','hepsaline']},
+    {label:'Dextrose+Saline', keys:['d5_n09','d5_n045','d5_n018','d10_n09','d10_n045','d10_n018','d2_5_n09','d2_5_n045']},
+    {label:'Enteral', keys:['bm_maternal','bm_donor','bm_maternal_fort','bm_donor_fort','nutriprem1','nutriprem2']},
+    {label:'Other', keys:['custom']},
+  ];
+  var h = '<option value="">— Select —</option>';
+  g.forEach(function(gr) {
+    h += '<optgroup label="'+gr.label+'">';
+    gr.keys.forEach(function(k) { h += '<option value="'+k+'">'+FLUIDS[k].label+'</option>'; });
+    h += '</optgroup>';
+  });
+  return h;
+}
+
+function addInfusion() {
+  var id = ++infCount;
+  var list = document.getElementById('infusion-list');
+  var em = document.getElementById('empty-msg'); if(em) em.remove();
+  var div = document.createElement('div');
+  div.className = 'infusion-card cat-fluid';
+  div.id = 'inf-'+id;
+  div.dataset.unit = 'kgd';
+  div.innerHTML =
+    '<div class="infusion-header">'+
+    '<div class="field"><label>Fluid</label>'+
+    '<select id="fl-'+id+'" onchange="onFluidChange('+id+',this)">'+buildOptions()+'</select>'+
+    '</div>'+
+    '<div class="inf-vol-row">'+
+    '<div class="field inf-vol-field"><label>Volume</label>'+
+    '<input type="number" id="vol-'+id+'" inputmode="decimal" min="0" step="0.1" placeholder="0" oninput="recalcAll()">'+
+    '</div>'+
+    '<div class="unit-toggle">'+
+    '<button type="button" class="unit-btn active" id="ukd-'+id+'" onclick="setUnit('+id+',\'kgd\')">ml/kg/d</button>'+
+    '<button type="button" class="unit-btn" id="uhr-'+id+'" onclick="setUnit('+id+',\'hr\')">ml/hr</button>'+
+    '</div>'+
+    '<button type="button" class="inf-remove" onclick="removeInfusion('+id+')">&#x2715;</button>'+
+    '</div>'+
+    '</div>'+
+    '<div class="conversion-hint" id="conv-'+id+'"></div>'+
+    '<div class="custom-panel" id="cp-'+id+'">'+
+    '<div class="custom-panel-title">Custom fluid composition (per 100 ml)</div>'+
+    '<div class="custom-grid">'+
+    '<div class="field"><label>AA (g)</label><input type="number" id="cfa-'+id+'" inputmode="decimal" min="0" step="0.1" placeholder="0" oninput="recalcCustom('+id+')"></div>'+
+    '<div class="field"><label>Glucose (g)</label><input type="number" id="cfg-'+id+'" inputmode="decimal" min="0" step="0.1" placeholder="0" oninput="recalcCustom('+id+')"></div>'+
+    '<div class="field"><label>Lipid (g)</label><input type="number" id="cff-'+id+'" inputmode="decimal" min="0" step="0.1" placeholder="0" oninput="recalcCustom('+id+')"></div>'+
+    '<div class="field"><label>Na (mmol)</label><input type="number" id="cfna-'+id+'" inputmode="decimal" min="0" step="0.1" placeholder="0" oninput="recalcCustom('+id+')"></div>'+
+    '<div class="field"><label>K (mmol)</label><input type="number" id="cfk-'+id+'" inputmode="decimal" min="0" step="0.1" placeholder="0" oninput="recalcCustom('+id+')"></div>'+
+    '<div class="field"><label>Ca (mmol)</label><input type="number" id="cfca-'+id+'" inputmode="decimal" min="0" step="0.1" placeholder="0" oninput="recalcCustom('+id+')"></div>'+
+    '<div class="field"><label>PO₄ (mmol)</label><input type="number" id="cfpo-'+id+'" inputmode="decimal" min="0" step="0.1" placeholder="0" oninput="recalcCustom('+id+')"></div>'+
+    '<div class="field"><label>Mg (mmol)</label><input type="number" id="cfmg-'+id+'" inputmode="decimal" min="0" step="0.1" placeholder="0" oninput="recalcCustom('+id+')"></div>'+
+    '</div>'+
+    '<div class="custom-kcal" id="cfkd-'+id+'">Calculated: 0.0 kcal / 100 ml</div>'+
+    '</div>';
+  list.appendChild(div);
+  recalcAll();
+}
+
+function removeInfusion(id) {
+  var el = document.getElementById('inf-'+id); if(el) el.remove();
+  var list = document.getElementById('infusion-list');
+  if(!list.querySelector('.infusion-card')) list.innerHTML = '<div class="empty-state" id="empty-msg"><div class="empty-icon">💧</div><p>Tap “Add Infusion” to begin</p></div>';
+  recalcAll();
+}
+
+function onFluidChange(id, sel) {
+  var fl = FLUIDS[sel.value];
+  var card = document.getElementById('inf-'+id);
+  var cats = {pn:'cat-pn',lipid:'cat-lipid',fluid:'cat-fluid',milk:'cat-milk',custom:'cat-custom'};
+  card.className = 'infusion-card '+(fl ? (cats[fl.cat]||'cat-fluid') : 'cat-fluid');
+  document.getElementById('cp-'+id).className = 'custom-panel'+(fl && fl.cat==='custom' ? ' show' : '');
+  recalcAll();
+}
+
+function setUnit(id, unit) {
+  document.getElementById('inf-'+id).dataset.unit = unit;
+  document.getElementById('ukd-'+id).className = 'unit-btn'+(unit==='kgd'?' active':'');
+  document.getElementById('uhr-'+id).className = 'unit-btn'+(unit==='hr'?' active':'');
+  recalcAll();
+}
+
+function getVolKgDay(id) {
+  var volEl = document.getElementById('vol-'+id);
+  var vol = volEl ? parseFloat(volEl.value)||0 : 0;
+  var infEl = document.getElementById('inf-'+id);
+  var unit = (infEl && infEl.dataset) ? (infEl.dataset.unit||'kgd') : 'kgd';
+  if(unit==='hr') {
+    var bw = parseFloat(document.getElementById('birthweight').value)||1000;
+    var v = (vol*24*1000)/bw;
+    var el = document.getElementById('conv-'+id); if(el) el.textContent = v.toFixed(1)+' ml/kg/day';
+    return v;
+  }
+  var el2 = document.getElementById('conv-'+id); if(el2) el2.textContent='';
+  return vol;
+}
+
+function recalcCustom(id) {
+  var aaEl  = document.getElementById('cfa-'+id);  var aa  = aaEl  ? parseFloat(aaEl.value)||0  : 0;
+  var gluEl = document.getElementById('cfg-'+id);  var glu = gluEl ? parseFloat(gluEl.value)||0 : 0;
+  var fatEl = document.getElementById('cff-'+id);  var fat = fatEl ? parseFloat(fatEl.value)||0 : 0;
+  var naEl  = document.getElementById('cfna-'+id); var na  = naEl  ? parseFloat(naEl.value)||0  : 0;
+  var kcal = aa*4 + glu*3.4 + fat*9;
+  var d = document.getElementById('cfkd-'+id); if(d) d.textContent = 'Calculated: '+kcal.toFixed(1)+' kcal / 100 ml';
+  FLUIDS['_c'+id] = {cat:'custom', na:na, glucose:glu, aa:aa, fat:fat, kcal:kcal};
+  recalcAll();
+}
+
+function getFluid(id) {
+  var flEl = document.getElementById('fl-'+id);
+  var key = flEl ? flEl.value : '';
+  if(!key) return null;
+  if(key==='custom') return FLUIDS['_c'+id] || FLUIDS.custom;
+  return FLUIDS[key] || null;
+}
+
+var catBadge = {pn:'badge-pn',lipid:'badge-lipid',fluid:'badge-fluid',milk:'badge-milk',custom:'badge-custom'};
+
+function recalcAll() {
+  var cards = document.querySelectorAll('.infusion-card');
+  var rows=[], totVol=0, totNa=0, totGlu=0, totKcal=0;
+  cards.forEach(function(card) {
+    var id = parseInt(card.id.replace('inf-',''));
+    var fl = getFluid(id); if(!fl) return;
+    var vol = getVolKgDay(id); if(!vol) return;
+    var naD=fl.na*(vol/100), gluD=fl.glucose*(vol/100), kcalD=fl.kcal*(vol/100);
+    totVol+=vol; totNa+=naD; totGlu+=gluD; totKcal+=kcalD;
+    var flEl = document.getElementById('fl-'+id);
+    rows.push({id:id, fl:fl, vol:vol, naD:naD, gluD:gluD, kcalD:kcalD, key: flEl ? (flEl.value||'custom') : 'custom'});
+  });
+  var setF = function(elId, v, d) {
+    var el = document.getElementById(elId);
+    if(el) el.textContent = rows.length ? v.toFixed(d===undefined?1:d) : '—';
+  };
+  setF('ft-vol',totVol,1); setF('ft-na',totNa,2); setF('ft-glu',totGlu,2);
+  setF('ft-gir',totGlu*1000/1440,2); setF('ft-kcal',totKcal,1);
+  renderBreakdown(rows, totVol, totNa, totGlu, totKcal);
+  renderGuidance(totVol, rows);
+  saveState();
+}
+
+function renderBreakdown(rows, totVol, totNa, totGlu, totKcal) {
+  var el = document.getElementById('breakdown-table');
+  if(!rows.length) { el.innerHTML='<p style="font-size:13px;color:var(--text-3);">Add infusions to see breakdown</p>'; return; }
+  var totGIR = totGlu*1000/1440;
+  var trs = rows.map(function(r) {
+    var lbl = (r.key==='custom' ? 'Custom' : (FLUIDS[r.key] && FLUIDS[r.key].label)) || 'Custom';
+    var cb = catBadge[r.fl.cat]||'badge-fluid';
+    return '<tr><td><span class="badge '+cb+'">'+lbl+'</span></td><td>'+r.vol.toFixed(1)+'</td><td>'+r.naD.toFixed(2)+'</td><td>'+r.gluD.toFixed(2)+'</td><td>'+(r.gluD*1000/1440).toFixed(2)+'</td><td>'+r.kcalD.toFixed(1)+'</td></tr>';
+  }).join('');
+  el.innerHTML = '<table class="results-table"><thead><tr><th>Fluid</th><th>ml/kg/d</th><th>Na</th><th>Glu g</th><th>GIR</th><th>kcal</th></tr></thead><tbody>'+trs+'<tr class="total-row"><td>TOTAL</td><td>'+totVol.toFixed(1)+'</td><td>'+totNa.toFixed(2)+'</td><td>'+totGlu.toFixed(2)+'</td><td>'+totGIR.toFixed(2)+'</td><td>'+totKcal.toFixed(1)+'</td></tr></tbody></table>';
+}
+
+function renderGuidance(totalIntake, rows) {
+  rows = rows || [];
+  var body = document.getElementById('guidance-body');
+  var ga  = parseFloat(document.getElementById('ga').value);
+  var bw  = parseFloat(document.getElementById('birthweight').value);
+  var cw  = parseFloat(document.getElementById('currentweight').value);
+  var dol = document.getElementById('dol').value;
+  var uoKgDay = getUOKgDay();
+  var uoKgHr  = !isNaN(uoKgDay) ? uoKgDay/24 : NaN;
+  if(!ga || !bw) { body.innerHTML='<div class="guidance-placeholder">Enter gestational age &amp; birthweight above</div>'; return; }
+
+  var warnings = safetyWarnings(uoKgDay, totalIntake, bw, cw, rows);
+  var warnHtml = warnings.map(function(w) {
+    if(w.hard) return '<div class="warning-box warn-red warn-hard"><div>'+w.msg+'</div>'+
+      '<button type="button" class="warn-override-btn" onclick="overrideWarning(\''+w.key+'\')">Override — confirm clinical review documented</button></div>';
+    return '<div class="warning-box warn-'+w.lvl+'">'+w.msg+'</div>';
+  }).join('');
+
+  var iwl = getIWL(ga);
+  var src = ga<=23 ? 'Ågren et al. 2022 (22–23w, 80–85% RH)' : ga<=25 ? 'Ågren et al. 2022 (extrapolated)' : 'Dereddy et al. 2025 (interpolated, 85% RH)';
+  var iwlCls = ga<=23 ? 'stat-red' : ga<=25 ? 'stat-amber' : 'stat-blue';
+  var hasUO = !isNaN(uoKgDay) && uoKgDay>=0;
+  var totalLosses = hasUO ? uoKgDay+iwl : null;
+  var tgtLow  = totalLosses ? Math.max(0, totalLosses-30) : null;
+  var tgtHigh = totalLosses ? Math.max(0, totalLosses-20) : null;
+  var hasIntake = totalIntake>0;
+  var balance = (hasIntake && totalLosses) ? totalIntake-totalLosses : null;
+  var wPct = balance!==null ? balance/10 : null;
+  var status = null;
+  if(wPct!==null) {
+    if(wPct<-3.5)     status={cls:'pill-amber',icon:'⚠️',text:'Deficit exceeds target'};
+    else if(wPct<-2.0) status={cls:'pill-green',icon:'✅',text:'Within target (2–3%/day)'};
+    else if(wPct<0)   status={cls:'pill-amber',icon:'⚠️',text:'Below target weight loss'};
+    else              status={cls:'pill-red',icon:'🔴',text:'Positive balance'};
+  }
+  var uoDisplay = hasUO ? (uoUnit==='kghr' ? uoKgHr.toFixed(2)+' ml/kg/hr ('+uoKgDay.toFixed(0)+' ml/kg/d)' : uoKgDay.toFixed(1)+' ml/kg/d') : null;
+
+  var html = warnHtml+'<div class="stat-row">';
+  html += '<div class="stat-box '+iwlCls+'"><div class="stat-label">IWL at 85% humidity</div><div class="stat-value">'+iwl+'</div><div class="stat-unit">ml/kg/day ('+ga+'w)</div><div class="stat-source">'+src+'</div></div>';
+  if(hasUO) {
+    html += '<div class="stat-box"><div class="stat-label">Total Losses</div><div class="stat-value">'+totalLosses.toFixed(0)+'</div><div class="stat-unit">ml/kg/day (UO+IWL)</div></div>';
+    html += '<div class="stat-box stat-green stat-wide"><div class="stat-label">Target intake for 2–3%/day loss</div><div class="stat-value">'+tgtLow+'–'+tgtHigh+' ml/kg/day</div><div class="stat-unit">Deficit of 20–30 ml/kg/day from total losses</div></div>';
+  } else {
+    html += '<div class="stat-box"><div class="stat-label">Urine Output</div><div class="stat-value" style="font-size:14px;padding-top:4px">Enter above</div><div class="stat-unit">Required for target calc</div></div>';
+  }
+  html += '</div>';
+  if(totalLosses) {
+    html += '<div class="guidance-bar">';
+    if(hasIntake) {
+      html += '<div class="g-row"><span class="g-label">Urine output</span><span class="g-value">'+uoDisplay+'</span></div>';
+      html += '<div class="g-row"><span class="g-label">Total losses (UO+IWL)</span><span class="g-value">'+totalLosses.toFixed(1)+' ml/kg/d</span></div>';
+      html += '<div class="g-row"><span class="g-label">Current intake</span><span class="g-value">'+totalIntake.toFixed(1)+' ml/kg/d</span></div>';
+      html += '<div class="g-row"><span class="g-label">Fluid balance</span><span class="g-value">'+(balance>=0?'+':'')+balance.toFixed(1)+' ml/kg/d</span></div>';
+      html += '<div class="g-row"><span class="g-label">Predicted wt change</span><span class="g-value">'+(wPct>=0?'+':'')+wPct.toFixed(1)+'%/day</span></div>';
+      html += '<div class="g-row"><span class="g-label">Status</span><span class="g-value"><span class="status-pill '+status.cls+'">'+status.icon+' '+status.text+'</span></span></div>';
+    }
+    html += '<div class="g-row"><span class="g-label">Target intake range</span><span class="g-value" style="color:var(--green)">'+tgtLow+'–'+tgtHigh+' ml/kg/d</span></div>';
+    html += '</div>';
+  }
+  if(cw && bw) {
+    var pct = ((cw-bw)/bw)*100;
+    var dolStr = dol ? ' (Day '+dol+')' : '';
+    var cls2 = pct<-15 ? 'stat-red' : pct<-5 ? 'stat-amber' : pct<0 ? 'stat-green' : 'stat-red';
+    html += '<div class="stat-box '+cls2+'" style="margin-top:10px"><div class="stat-label">Actual weight change'+dolStr+'</div><div class="stat-value">'+(pct>=0?'+':'')+pct.toFixed(1)+'%</div><div class="stat-unit">'+cw.toFixed(0)+' g vs birthweight '+bw.toFixed(0)+' g · Target: −10 to −15% over 7 days</div></div>';
+  }
+  body.innerHTML = html;
+}
+
+function togglePanel(id) {
+  document.getElementById(id+'-toggle').classList.toggle('open');
+  document.getElementById(id+'-panel').classList.toggle('show');
+}
+
+function clearAll() {
+  if(!confirm('Clear all patient details and infusions?')) return;
+  ['ga','birthweight','currentweight','dol','uo'].forEach(function(id) { var el=document.getElementById(id); if(el) el.value=''; });
+  var list = document.getElementById('infusion-list');
+  list.innerHTML = '<div class="empty-state" id="empty-msg"><div class="empty-icon">💧</div><p>Tap “Add Infusion” to begin</p></div>';
+  infCount = 0; hardOverrides.clear(); setUOUnit('kghr');
+  try { localStorage.removeItem(SAVE_KEY); } catch(e) {}
+}
+
+// ── localStorage persistence ──────────────────────────────────────────────────
+var SAVE_KEY = 'neonatal_calc_android';
+
+function saveState() {
+  var state = {
+    patient: {
+      ga: document.getElementById('ga').value,
+      birthweight: document.getElementById('birthweight').value,
+      currentweight: document.getElementById('currentweight').value,
+      dol: document.getElementById('dol').value,
+      uo: document.getElementById('uo').value,
+      uoUnit: uoUnit
+    },
+    infusions: []
+  };
+  document.querySelectorAll('.infusion-card').forEach(function(card) {
+    var id = parseInt(card.id.replace('inf-',''));
+    var flEl  = document.getElementById('fl-'+id);  var key  = flEl  ? flEl.value||''  : '';
+    var volEl = document.getElementById('vol-'+id); var vol  = volEl ? volEl.value||'' : '';
+    var unit = card.dataset.unit || 'kgd';
+    var custom = null;
+    if(key==='custom') {
+      var cfaEl=document.getElementById('cfa-'+id),  cfgEl=document.getElementById('cfg-'+id),
+          cffEl=document.getElementById('cff-'+id),  cfnaEl=document.getElementById('cfna-'+id),
+          cfkEl=document.getElementById('cfk-'+id),  cfcaEl=document.getElementById('cfca-'+id),
+          cfpoEl=document.getElementById('cfpo-'+id), cfmgEl=document.getElementById('cfmg-'+id);
+      custom = {
+        aa:      cfaEl  ? cfaEl.value||''  : '',
+        glucose: cfgEl  ? cfgEl.value||''  : '',
+        fat:     cffEl  ? cffEl.value||''  : '',
+        na:      cfnaEl ? cfnaEl.value||'' : '',
+        k:       cfkEl  ? cfkEl.value||''  : '',
+        ca:      cfcaEl ? cfcaEl.value||'' : '',
+        po:      cfpoEl ? cfpoEl.value||'' : '',
+        mg:      cfmgEl ? cfmgEl.value||'' : ''
+      };
+    }
+    state.infusions.push({key:key, vol:vol, unit:unit, custom:custom});
+  });
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+function loadState() {
+  try {
+    var raw = localStorage.getItem(SAVE_KEY); if(!raw) return;
+    var state = JSON.parse(raw);
+    if(state.patient) {
+      ['ga','birthweight','currentweight','dol','uo'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if(el && state.patient[id] !== undefined) el.value = state.patient[id];
+      });
+      if(state.patient.uoUnit) setUOUnit(state.patient.uoUnit);
+    }
+    if(state.infusions && state.infusions.length) {
+      state.infusions.forEach(function(inf) {
+        addInfusion(); var id = infCount;
+        var flSel = document.getElementById('fl-'+id);
+        if(flSel && inf.key) { flSel.value = inf.key; onFluidChange(id, flSel); }
+        var volEl = document.getElementById('vol-'+id); if(volEl) volEl.value = inf.vol;
+        if(inf.unit) setUnit(id, inf.unit);
+        if(inf.custom) {
+          [['cfa','aa'],['cfg','glucose'],['cff','fat'],['cfna','na'],
+           ['cfk','k'],['cfca','ca'],['cfpo','po'],['cfmg','mg']].forEach(function(pair) {
+            var el = document.getElementById(pair[0]+'-'+id);
+            if(el && inf.custom[pair[1]] !== undefined) el.value = inf.custom[pair[1]];
+          });
+          recalcCustom(id);
+        }
+      });
+    }
+    recalcAll();
+  } catch(e) {}
+}
+
+document.addEventListener('DOMContentLoaded', loadState);
+</script>
+</body>
+</html>
