@@ -382,6 +382,18 @@ const FLUIDS = {
 const IWL_85={22:70,23:60,24:50,25:40,26:35,27:30,28:25,29:22,30:20,31:18,32:15,33:12,34:10,35:8,36:7};
 function getIWL(ga){const g=Math.round(ga);return g<=22?70:g>=36?7:(IWL_85[g]??20);}
 
+// PN advancement policy — minimum aqueous PN + lipid floor by day of life
+// Source: local institutional PN advancement protocol
+const PN_FLOORS = {
+  1: { pn:65, lipid:6, floor:71  },
+  2: { pn:65, lipid:6, floor:71  },
+  3: { pn:75, lipid:6, floor:81  },
+  4: { pn:75, lipid:6, floor:81  },
+  5: { pn:75, lipid:6, floor:81  },
+  6: { pn:75, lipid:6, floor:81  },
+  7: { pn:75, lipid:6, floor:81  }
+};
+
 let infCount=0;
 let uoUnit='kghr';
 let hardOverrides=new Set();
@@ -408,7 +420,7 @@ function getUOKgDay(){
   if(isNaN(val)||val<0)return NaN;
   return uoUnit==='kghr'?val*24:val;
 }
-function safetyWarnings(uoKgDay,totalIntake,bw,cw,rows=[]){
+function safetyWarnings(uoKgDay,totalIntake,bw,cw,rows=[],dol=''){
   const w=[];
   if(!isNaN(uoKgDay)&&uoKgDay>=0){
     const hr=uoKgDay/24;
@@ -562,7 +574,7 @@ function renderGuidance(totalIntake,rows=[]){
   const uoKgHr=!isNaN(uoKgDay)?uoKgDay/24:NaN;
   if(!ga||!bw){body.innerHTML=`<div class="guidance-placeholder">Enter gestational age &amp; birthweight above</div>`;return;}
 
-  const warnings=safetyWarnings(uoKgDay,totalIntake,bw,cw,rows);
+  const warnings=safetyWarnings(uoKgDay,totalIntake,bw,cw,rows,dol);
   let warnHtml=warnings.map(w=>{
     if(w.hard)return `<div class="warning-box warn-red warn-hard"><div>${w.msg}</div><button type="button" class="warn-override-btn" onclick="overrideWarning('${w.key}')">Override — confirm clinical review documented</button></div>`;
     return `<div class="warning-box warn-${w.lvl}">${w.msg}</div>`;
@@ -573,8 +585,20 @@ function renderGuidance(totalIntake,rows=[]){
   const iwlCls=ga<=23?'stat-red':ga<=25?'stat-amber':'stat-blue';
   const hasUO=!isNaN(uoKgDay)&&uoKgDay>=0;
   const totalLosses=hasUO?uoKgDay+iwl:null;
-  const tgtLow=totalLosses?Math.max(0,totalLosses-30):null;
-  const tgtHigh=totalLosses?Math.max(0,totalLosses-20):null;
+  let tgtLow=totalLosses?Math.max(0,totalLosses-30):null;
+  let tgtHigh=totalLosses?Math.max(0,totalLosses-20):null;
+  // Floor target range at PN+Lipid minimum for entered DOL
+  let pnFloor=0,floorApplied=false;
+  if(dol){
+    const dolFloor=parseInt(dol,10);
+    if(dolFloor>=1){
+      const flDay=dolFloor>7?7:dolFloor;
+      const flEntry=PN_FLOORS[flDay];
+      if(flEntry)pnFloor=flEntry.floor;
+    }
+  }
+  if(pnFloor>0&&tgtLow!==null&&tgtLow<pnFloor){tgtLow=pnFloor;floorApplied=true;}
+  if(pnFloor>0&&tgtHigh!==null&&tgtHigh<pnFloor){tgtHigh=pnFloor;floorApplied=true;}
   const hasIntake=totalIntake>0;
   const balance=(hasIntake&&totalLosses)?totalIntake-totalLosses:null;
   const wPct=balance!==null?balance/10:null;
@@ -591,7 +615,7 @@ function renderGuidance(totalIntake,rows=[]){
   html+=`<div class="stat-box ${iwlCls}"><div class="stat-label">IWL at 85% humidity</div><div class="stat-value">${iwl}</div><div class="stat-unit">ml/kg/day (${ga}w)</div><div class="stat-source">${src}</div></div>`;
   if(hasUO){
     html+=`<div class="stat-box"><div class="stat-label">Total Losses</div><div class="stat-value">${totalLosses.toFixed(0)}</div><div class="stat-unit">ml/kg/day (UO+IWL)</div></div>`;
-    html+=`<div class="stat-box stat-green stat-wide"><div class="stat-label">Target intake for 2–3%/day loss</div><div class="stat-value">${tgtLow}–${tgtHigh} ml/kg/day</div><div class="stat-unit">Deficit of 20–30 ml/kg/day from total losses</div></div>`;
+    html+=`<div class="stat-box stat-green stat-wide"><div class="stat-label">Target intake for 2–3%/day loss</div><div class="stat-value">${tgtLow}–${tgtHigh} ml/kg/day</div><div class="stat-unit">${floorApplied?`&#9873; Floored at PN+Lipid minimum for Day ${dol} — nutritional floor takes precedence over fluid restriction`:`Deficit of 20–30 ml/kg/day from total losses`}</div></div>`;
   } else {
     html+=`<div class="stat-box"><div class="stat-label">Urine Output</div><div class="stat-value" style="font-size:14px;padding-top:4px">Enter above</div><div class="stat-unit">Required for target calc</div></div>`;
   }
@@ -607,6 +631,9 @@ function renderGuidance(totalIntake,rows=[]){
       html+=`<div class="g-row"><span class="g-label">Status</span><span class="g-value"><span class="status-pill ${status.cls}">${status.icon} ${status.text}</span></span></div>`;
     }
     html+=`<div class="g-row"><span class="g-label">Target intake range</span><span class="g-value" style="color:var(--green)">${tgtLow}–${tgtHigh} ml/kg/d</span></div>`;
+    if(floorApplied){
+      html+=`<div class="g-row" style="background:rgba(217,119,6,0.08)"><span class="g-label" style="color:#d97706">&#9873; Nutritional floor — Day ${dol}</span><span class="g-value" style="color:#d97706;font-size:12px">Do not restrict below PN+Lipid min. (${pnFloor} ml/kg/d) regardless of UO</span></div>`;
+    }
     html+=`</div>`;
   }
   if(cw&&bw){

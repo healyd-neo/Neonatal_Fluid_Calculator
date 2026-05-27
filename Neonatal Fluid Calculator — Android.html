@@ -385,11 +385,23 @@ var FLUIDS = {
 var IWL_85 = {22:70,23:60,24:50,25:40,26:35,27:30,28:25,29:22,30:20,31:18,32:15,33:12,34:10,35:8,36:7};
 function getIWL(ga) { var g=Math.round(ga); return g<=22?70:g>=36?7:(IWL_85[g]||20); }
 
+// PN advancement policy — minimum aqueous PN + lipid floor by day of life
+// Source: local institutional PN advancement protocol
+var PN_FLOORS = {
+  1: { pn:65, lipid:6, floor:71  },
+  2: { pn:65, lipid:6, floor:71  },
+  3: { pn:75, lipid:6, floor:81  },
+  4: { pn:75, lipid:6, floor:81  },
+  5: { pn:75, lipid:6, floor:81  },
+  6: { pn:75, lipid:6, floor:81  },
+  7: { pn:75, lipid:6, floor:81  }
+};
+
 var infCount = 0;
 var uoUnit = 'kghr';
-var hardOverrides = new Set();
+var hardOverrides = {};
 
-function overrideWarning(key) { hardOverrides.add(key); recalcAll(); }
+function overrideWarning(key) { hardOverrides[key] = true; recalcAll(); }
 
 function getBlendedIVGlucoseConc(rows) {
   var tG=0, tV=0;
@@ -415,9 +427,29 @@ function getUOKgDay() {
   return uoUnit==='kghr' ? val*24 : val;
 }
 
-function safetyWarnings(uoKgDay, totalIntake, bw, cw, rows) {
+function safetyWarnings(uoKgDay, totalIntake, bw, cw, rows, dol) {
   rows = rows || [];
+  dol  = dol  || 0;
   var w = [];
+  // ── Minimum nutrition floor ──────────────────────────────────────────────
+  var dolInt = parseInt(dol, 10);
+  if (dolInt >= 1 && totalIntake > 0) {
+    var floorDay = dolInt > 7 ? 7 : dolInt;
+    var floorEntry = PN_FLOORS[floorDay];
+    if (floorEntry) {
+      if (totalIntake >= floorEntry.floor) {
+        delete hardOverrides['pn_floor_hard'];
+      } else if (!hardOverrides['pn_floor_hard']) {
+        w.push({ lvl:'red', hard:true, key:'pn_floor_hard',
+          msg:'\u26d4 Total intake ' + totalIntake.toFixed(1) + ' ml/kg/day is below the minimum nutrition floor for Day ' + dolInt +
+              ' (PN ' + floorEntry.pn + ' + Lipid ' + floorEntry.lipid + ' = ' + floorEntry.floor + ' ml/kg/day). ' +
+              'Do not restrict fluids below nutritional requirements based on urine output alone.' });
+      } else {
+        w.push({ lvl:'red',
+          msg:'\u26d4 Total intake below Day ' + dolInt + ' nutrition floor (' + floorEntry.floor + ' ml/kg/day) [Override active \u2014 ensure clinical review documented]' });
+      }
+    }
+  }
   if(!isNaN(uoKgDay) && uoKgDay>=0) {
     var hr = uoKgDay/24;
     if(hr>10) w.push({lvl:'red', msg:'⛔ UO very high ('+hr.toFixed(1)+' ml/kg/hr) — verify before prescribing'});
@@ -431,16 +463,16 @@ function safetyWarnings(uoKgDay, totalIntake, bw, cw, rows) {
     else if(pct<-15) w.push({lvl:'amber', msg:'⚠️ Weight loss '+Math.abs(pct).toFixed(1)+'% — exceeds 15%; review fluid management'});
   }
   var gc = getBlendedIVGlucoseConc(rows);
-  if(gc<=20) hardOverrides.delete('glucose_conc_hard');
+  if(gc<=20) delete hardOverrides['glucose_conc_hard'];
   var lv = rows.filter(function(r){return r.fl.cat==='lipid';}).reduce(function(s,r){return s+r.vol;},0);
-  if(lv<=18) hardOverrides.delete('lipid_vol_hard');
+  if(lv<=18) delete hardOverrides['lipid_vol_hard'];
   if(rows.length>0 && gc>0) {
-    if(gc>20 && !hardOverrides.has('glucose_conc_hard')) w.push({lvl:'red', msg:'⛔ Blended IV glucose '+gc.toFixed(1)+'% exceeds 20% — requires immediate clinical review', hard:true, key:'glucose_conc_hard'});
+    if(gc>20 && !hardOverrides['glucose_conc_hard']) w.push({lvl:'red', msg:'⛔ Blended IV glucose '+gc.toFixed(1)+'% exceeds 20% — requires immediate clinical review', hard:true, key:'glucose_conc_hard'});
     else if(gc>20) w.push({lvl:'red', msg:'⛔ Blended IV glucose '+gc.toFixed(1)+'% exceeds 20% [Override active — ensure clinical review documented]'});
     else if(gc>15) w.push({lvl:'red', msg:'⛔ Blended IV glucose '+gc.toFixed(1)+'% is very high — verify central access confirmed'});
     else if(gc>12.5) w.push({lvl:'amber', msg:'⚠️ Blended IV glucose '+gc.toFixed(1)+'% — central line required'});
   }
-  if(lv>18 && !hardOverrides.has('lipid_vol_hard')) w.push({lvl:'red', msg:'⛔ Lipid volume '+lv.toFixed(1)+' ml/kg/day exceeds institutional maximum (18 ml/kg/day)', hard:true, key:'lipid_vol_hard'});
+  if(lv>18 && !hardOverrides['lipid_vol_hard']) w.push({lvl:'red', msg:'⛔ Lipid volume '+lv.toFixed(1)+' ml/kg/day exceeds institutional maximum (18 ml/kg/day)', hard:true, key:'lipid_vol_hard'});
   else if(lv>18) w.push({lvl:'red', msg:'⛔ Lipid volume '+lv.toFixed(1)+' ml/kg/day exceeds 18 ml/kg/day [Override active — ensure clinical review documented]'});
   return w;
 }
@@ -471,7 +503,7 @@ function addInfusion() {
   var div = document.createElement('div');
   div.className = 'infusion-card cat-fluid';
   div.id = 'inf-'+id;
-  div.dataset.unit = 'kgd';
+  div.setAttribute('data-unit', 'kgd');
   div.innerHTML =
     '<div class="infusion-header">'+
     '<div class="field"><label>Fluid</label>'+
@@ -524,7 +556,7 @@ function onFluidChange(id, sel) {
 }
 
 function setUnit(id, unit) {
-  document.getElementById('inf-'+id).dataset.unit = unit;
+  document.getElementById('inf-'+id).setAttribute('data-unit', unit);
   document.getElementById('ukd-'+id).className = 'unit-btn'+(unit==='kgd'?' active':'');
   document.getElementById('uhr-'+id).className = 'unit-btn'+(unit==='hr'?' active':'');
   recalcAll();
@@ -534,7 +566,7 @@ function getVolKgDay(id) {
   var volEl = document.getElementById('vol-'+id);
   var vol = volEl ? parseFloat(volEl.value)||0 : 0;
   var infEl = document.getElementById('inf-'+id);
-  var unit = (infEl && infEl.dataset) ? (infEl.dataset.unit||'kgd') : 'kgd';
+  var unit = infEl ? (infEl.getAttribute('data-unit') || 'kgd') : 'kgd';
   if(unit==='hr') {
     var bw = parseFloat(document.getElementById('birthweight').value)||1000;
     var v = (vol*24*1000)/bw;
@@ -612,7 +644,7 @@ function renderGuidance(totalIntake, rows) {
   var uoKgHr  = !isNaN(uoKgDay) ? uoKgDay/24 : NaN;
   if(!ga || !bw) { body.innerHTML='<div class="guidance-placeholder">Enter gestational age &amp; birthweight above</div>'; return; }
 
-  var warnings = safetyWarnings(uoKgDay, totalIntake, bw, cw, rows);
+  var warnings = safetyWarnings(uoKgDay, totalIntake, bw, cw, rows, dol);
   var warnHtml = warnings.map(function(w) {
     if(w.hard) return '<div class="warning-box warn-red warn-hard"><div>'+w.msg+'</div>'+
       '<button type="button" class="warn-override-btn" onclick="overrideWarning(\''+w.key+'\')">Override — confirm clinical review documented</button></div>';
@@ -626,6 +658,23 @@ function renderGuidance(totalIntake, rows) {
   var totalLosses = hasUO ? uoKgDay+iwl : null;
   var tgtLow  = totalLosses ? Math.max(0, totalLosses-30) : null;
   var tgtHigh = totalLosses ? Math.max(0, totalLosses-20) : null;
+  // Floor target range at PN+Lipid minimum for entered DOL
+  var pnFloor = 0;
+  var floorApplied = false;
+  if (dol) {
+    var dolFloor = parseInt(dol, 10);
+    if (dolFloor >= 1) {
+      var flDay = dolFloor > 7 ? 7 : dolFloor;
+      var flEntry = PN_FLOORS[flDay];
+      if (flEntry) pnFloor = flEntry.floor;
+    }
+  }
+  if (pnFloor > 0 && tgtLow !== null && tgtLow < pnFloor) {
+    tgtLow = pnFloor; floorApplied = true;
+  }
+  if (pnFloor > 0 && tgtHigh !== null && tgtHigh < pnFloor) {
+    tgtHigh = pnFloor; floorApplied = true;
+  }
   var hasIntake = totalIntake>0;
   var balance = (hasIntake && totalLosses) ? totalIntake-totalLosses : null;
   var wPct = balance!==null ? balance/10 : null;
@@ -642,7 +691,7 @@ function renderGuidance(totalIntake, rows) {
   html += '<div class="stat-box '+iwlCls+'"><div class="stat-label">IWL at 85% humidity</div><div class="stat-value">'+iwl+'</div><div class="stat-unit">ml/kg/day ('+ga+'w)</div><div class="stat-source">'+src+'</div></div>';
   if(hasUO) {
     html += '<div class="stat-box"><div class="stat-label">Total Losses</div><div class="stat-value">'+totalLosses.toFixed(0)+'</div><div class="stat-unit">ml/kg/day (UO+IWL)</div></div>';
-    html += '<div class="stat-box stat-green stat-wide"><div class="stat-label">Target intake for 2–3%/day loss</div><div class="stat-value">'+tgtLow+'–'+tgtHigh+' ml/kg/day</div><div class="stat-unit">Deficit of 20–30 ml/kg/day from total losses</div></div>';
+    html += '<div class="stat-box stat-green stat-wide"><div class="stat-label">Target intake for 2–3%/day loss</div><div class="stat-value">'+tgtLow+'–'+tgtHigh+' ml/kg/day</div><div class="stat-unit">'+(floorApplied?'&#9873; Floored at PN+Lipid minimum for Day '+dol+' — nutritional floor takes precedence over fluid restriction':'Deficit of 20–30 ml/kg/day from total losses')+'</div></div>';
   } else {
     html += '<div class="stat-box"><div class="stat-label">Urine Output</div><div class="stat-value" style="font-size:14px;padding-top:4px">Enter above</div><div class="stat-unit">Required for target calc</div></div>';
   }
@@ -658,6 +707,12 @@ function renderGuidance(totalIntake, rows) {
       html += '<div class="g-row"><span class="g-label">Status</span><span class="g-value"><span class="status-pill '+status.cls+'">'+status.icon+' '+status.text+'</span></span></div>';
     }
     html += '<div class="g-row"><span class="g-label">Target intake range</span><span class="g-value" style="color:var(--green)">'+tgtLow+'–'+tgtHigh+' ml/kg/d</span></div>';
+    if (floorApplied) {
+      html += '<div class="g-row" style="background:rgba(217,119,6,0.08)">' +
+        '<span class="g-label" style="color:#d97706">&#9873; Nutritional floor — Day '+dol+'</span>' +
+        '<span class="g-value" style="color:#d97706;font-size:12px">Do not restrict below PN+Lipid min. ('+pnFloor+' ml/kg/d) regardless of UO</span>' +
+      '</div>';
+    }
     html += '</div>';
   }
   if(cw && bw) {
@@ -670,8 +725,18 @@ function renderGuidance(totalIntake, rows) {
 }
 
 function togglePanel(id) {
-  document.getElementById(id+'-toggle').classList.toggle('open');
-  document.getElementById(id+'-panel').classList.toggle('show');
+  var toggle = document.getElementById(id + '-toggle');
+  var panel  = document.getElementById(id + '-panel');
+  if (!toggle || !panel) return;
+  var tc = toggle.className;
+  var pc = panel.className;
+  if (tc.indexOf('open') >= 0) {
+    toggle.className = tc.replace(' open', '').replace('open', '');
+    panel.className  = pc.replace(' show', '').replace('show', '');
+  } else {
+    toggle.className = tc + ' open';
+    panel.className  = pc + ' show';
+  }
 }
 
 function clearAll() {
@@ -679,7 +744,7 @@ function clearAll() {
   ['ga','birthweight','currentweight','dol','uo'].forEach(function(id) { var el=document.getElementById(id); if(el) el.value=''; });
   var list = document.getElementById('infusion-list');
   list.innerHTML = '<div class="empty-state" id="empty-msg"><div class="empty-icon">💧</div><p>Tap “Add Infusion” to begin</p></div>';
-  infCount = 0; hardOverrides.clear(); setUOUnit('kghr');
+  infCount = 0; hardOverrides = {}; setUOUnit('kghr');
   try { localStorage.removeItem(SAVE_KEY); } catch(e) {}
 }
 
@@ -702,7 +767,7 @@ function saveState() {
     var id = parseInt(card.id.replace('inf-',''));
     var flEl  = document.getElementById('fl-'+id);  var key  = flEl  ? flEl.value||''  : '';
     var volEl = document.getElementById('vol-'+id); var vol  = volEl ? volEl.value||'' : '';
-    var unit = card.dataset.unit || 'kgd';
+    var unit = card.getAttribute('data-unit') || 'kgd';
     var custom = null;
     if(key==='custom') {
       var cfaEl=document.getElementById('cfa-'+id),  cfgEl=document.getElementById('cfg-'+id),
