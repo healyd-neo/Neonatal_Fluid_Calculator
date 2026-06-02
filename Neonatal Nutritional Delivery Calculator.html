@@ -394,20 +394,6 @@
     </div>
   </div>
 
-  <!-- FLUID BALANCE GUIDANCE -->
-  <div class="card">
-    <div class="card-header">
-      <div class="card-header-icon icon-green">⚖️</div>
-      <div>
-        <h2>Fluid Balance &amp; Weight Loss Guidance</h2>
-        <p>Target 2–3% birthweight loss per day (~15% over first 7 days) · IWL estimated at 85% incubator humidity</p>
-      </div>
-    </div>
-    <div class="card-body" id="guidance-body">
-      <div class="guidance-placeholder">Enter gestational age and urine output above to see fluid balance guidance</div>
-    </div>
-  </div>
-
   <!-- INFUSIONS -->
   <div class="card">
     <div class="card-header">
@@ -485,6 +471,17 @@
             <tr><td>Calories</td><td>67 kcal</td></tr>
           </table>
         </div>
+
+        <div class="ref-card">
+          <div class="ref-card-head fluid">Hep + NaHCO₃ (HepBicarb — per 100 mL)</div>
+          <table class="ref-table">
+            <tr><td>Sodium</td><td>7.5 mmol</td></tr>
+            <tr><td>Bicarbonate</td><td>7.5 mmol</td></tr>
+            <tr><td>Heparin</td><td>1 unit/mL</td></tr>
+            <tr><td>Glucose</td><td>0 g</td></tr>
+            <tr><td>Calories</td><td>0 kcal</td></tr>
+          </table>
+        </div>
         <div class="ref-card">
           <div class="ref-card-head fluid">GIR (glucose infusion rate)</div>
           <table class="ref-table">
@@ -514,6 +511,20 @@
     </div>
   </div>
 
+<!-- FLUID BALANCE GUIDANCE -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-icon icon-green">⚖️</div>
+      <div>
+        <h2>Fluid Balance &amp; Weight Loss Guidance</h2>
+        <p>Target 2–3% birthweight loss per day (~15% over first 7 days) · IWL estimated at 85% incubator humidity</p>
+      </div>
+    </div>
+    <div class="card-body" id="guidance-body">
+      <div class="guidance-placeholder">Enter gestational age and urine output above to see fluid balance guidance</div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -531,6 +542,7 @@ const FLUIDS = {
   nacl045:   { label:'NaCl 0.45%',                  cat:'fluid', na:7.7,   glucose:0,    aa:0,   fat:0,   kcal:0     },
   nacl018:   { label:'NaCl 0.18%',                  cat:'fluid', na:3.08, glucose:0,    aa:0,   fat:0,   kcal:0     },
   hepsaline: { label:'Hep Saline (0.45% NaCl)',      cat:'fluid', na:7.7,  glucose:0,    aa:0,   fat:0,   kcal:0     },
+  hepbicarb: { label:'Hep + NaHCO₃ (HepBicarb)',  cat:'fluid', na:7.5,  glucose:0,    aa:0,   fat:0,   kcal:0,    bicarb:7.5  },
   d5_n09:    { label:'D5% + NaCl 0.9%',             cat:'fluid', na:15.4,  glucose:5.0,  aa:0,   fat:0,   kcal:17.0  },
   d5_n045:   { label:'D5% + NaCl 0.45%',            cat:'fluid', na:7.7,   glucose:5.0,  aa:0,   fat:0,   kcal:17.0  },
   d5_n018:   { label:'D5% + NaCl 0.18%',            cat:'fluid', na:3.08, glucose:5.0,  aa:0,   fat:0,   kcal:17.0  },
@@ -686,7 +698,7 @@ function buildFluidOptions(sel) {
     { label:'Parenteral Nutrition', keys:['cspn1','cspn2'] },
     { label:'Lipid', keys:['smof20'] },
     { label:'Dextrose Solutions', keys:['d2_5','d5','d10','d12_5','d15'] },
-    { label:'Saline Solutions', keys:['nacl09','nacl045','nacl018','hepsaline'] },
+    { label:'Saline Solutions', keys:['nacl09','nacl045','nacl018','hepsaline','hepbicarb'] },
     { label:'Dextrose + Saline', keys:['d5_n09','d5_n045','d5_n018','d10_n09','d10_n045','d10_n018','d2_5_n09','d2_5_n045'] },
     { label:'Enteral', keys:['bm_maternal','bm_donor','bm_maternal_fort','bm_donor_fort','nutriprem1','nutriprem2'] },
     { label:'Other', keys:['custom'] },
@@ -811,26 +823,26 @@ function getFluid(id) {
 
 function recalcAll() {
   const cards = document.querySelectorAll('.infusion-card');
-  let rows=[], totVol=0, totNa=0, totGlu=0, totKcal=0;
+  let rows=[], totVol=0, totNa=0, totGlu=0, totKcal=0, totBicarb=0;
   cards.forEach(card => {
     const id = parseInt(card.id.replace('inf-',''));
     const fl = getFluid(id);
     if (!fl) return;
     const vol = getVolKgDay(id);
     if (!vol) return;
-    const naD=fl.na*(vol/100), gluD=fl.glucose*(vol/100), kcalD=fl.kcal*(vol/100);
-    totVol+=vol; totNa+=naD; totGlu+=gluD; totKcal+=kcalD;
+    const naD=fl.na*(vol/100), gluD=fl.glucose*(vol/100), kcalD=fl.kcal*(vol/100), bicarbD=(fl.bicarb||0)*(vol/100);
+    totVol+=vol; totNa+=naD; totGlu+=gluD; totKcal+=kcalD; totBicarb+=bicarbD;
     const key=document.getElementById(`fl-${id}`)?.value||'custom';
-    rows.push({id,fl,vol,naD,gluD,kcalD,key});
+    rows.push({id,fl,vol,naD,gluD,kcalD,bicarbD,key});
   });
-  renderResults(rows, totVol, totNa, totGlu, totKcal);
+  renderResults(rows, totVol, totNa, totGlu, totKcal, totBicarb);
   renderGuidance(totVol, rows);
   saveState();
 }
 
 const catBadge = {pn:'badge-pn',lipid:'badge-lipid',fluid:'badge-fluid',milk:'badge-milk',custom:'badge-custom'};
 
-function renderResults(rows, totVol, totNa, totGlu, totKcal) {
+function renderResults(rows, totVol, totNa, totGlu, totKcal, totBicarb=0) {
   const area = document.getElementById('results-area');
   if (!rows.length) {
     area.innerHTML = `<div class="guidance-placeholder" style="padding:32px 20px;">Add infusions above to see nutritional delivery totals</div>`;
@@ -847,6 +859,7 @@ function renderResults(rows, totVol, totNa, totGlu, totKcal) {
       <td>${r.gluD.toFixed(2)}</td>
       <td>${(r.gluD*1000/1440).toFixed(2)}</td>
       <td>${r.kcalD.toFixed(1)}</td>
+      <td>${(r.bicarbD||0).toFixed(2)}</td>
     </tr>`;
   }).join('');
   area.innerHTML = `
@@ -858,6 +871,7 @@ function renderResults(rows, totVol, totNa, totGlu, totKcal) {
         <th>Glucose<br><span class="results-range">g/kg/day</span></th>
         <th>GIR<br><span class="results-range">mg/kg/min</span></th>
         <th>Calories<br><span class="results-range">kcal/kg/day</span></th>
+        <th>HCO₃<br><span class="results-range">mmol/kg/day</span></th>
       </tr></thead>
       <tbody>
         ${trs}
@@ -868,6 +882,7 @@ function renderResults(rows, totVol, totNa, totGlu, totKcal) {
           <td>${totGlu.toFixed(2)}</td>
           <td>${totGIR.toFixed(2)}</td>
           <td>${totKcal.toFixed(1)}</td>
+          <td>${totBicarb.toFixed(2)}</td>
         </tr>
       </tbody>
     </table>`;
@@ -921,8 +936,19 @@ function renderGuidance(totalIntake, rows=[]) {
   }
   if (pnFloor > 0 && tgtLow !== null && tgtLow < pnFloor) { tgtLow = pnFloor; floorApplied = true; }
   if (pnFloor > 0 && tgtHigh !== null && tgtHigh < pnFloor) { tgtHigh = pnFloor; floorApplied = true; }
-
   const hasIntake = totalIntake > 0;
+  // Target box colour: green=on target, amber=within 10, red=>10 off
+  let tgtBoxCls;
+  if (!hasIntake || tgtLow === null) {
+    tgtBoxCls = 'stat-green';
+  } else if (totalIntake >= tgtLow && totalIntake <= tgtHigh) {
+    tgtBoxCls = 'stat-green';
+  } else if (totalIntake >= tgtLow - 10 && totalIntake <= tgtHigh + 10) {
+    tgtBoxCls = 'stat-amber';
+  } else {
+    tgtBoxCls = 'stat-red';
+  }
+
   const balance = (hasIntake && totalLosses) ? totalIntake - totalLosses : null;
   const wChgPct = balance !== null ? balance / 10 : null;
 
@@ -950,7 +976,7 @@ function renderGuidance(totalIntake, rows=[]) {
     html += `<div class="stat-box"><div class="stat-label">Total Fluid Losses</div>
       <div class="stat-value">${totalLosses.toFixed(0)} <span style="font-size:16px;font-weight:500">ml/kg/day</span></div>
       <div class="stat-unit">UO ${uoKgDay.toFixed(0)} + IWL ${iwl} ml/kg/day</div></div>`;
-    html += `<div class="stat-box stat-green"><div class="stat-label">Target Intake for 2–3%/day loss</div>
+    html += `<div class="stat-box ${tgtBoxCls}"><div class="stat-label">Target Intake for 2–3%/day loss</div>
       <div class="stat-value">${tgtLow}–${tgtHigh} <span style="font-size:16px;font-weight:500">ml/kg/day</span></div>
       <div class="stat-unit">${floorApplied
         ? `&#9873; Floored at PN+Lipid minimum for Day ${dol} — nutritional floor takes precedence over fluid restriction`

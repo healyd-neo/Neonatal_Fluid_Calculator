@@ -141,15 +141,14 @@
     }
     .btn-add:active { background: #1d4ed8; }
 
-    /* STICKY FOOTER */
+    /* TOTALS BAR */
     .sticky-footer {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: var(--surface); border-top: 1px solid var(--border);
-      padding: 10px 16px 12px; z-index: 100;
-      box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
     }
+    .inline-totals-card { margin-bottom: 12px; }
     .footer-label { font-size: 10px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-    .footer-totals { display: grid; grid-template-columns: repeat(5,1fr); gap: 4px; }
+    .footer-totals { display: grid; grid-template-columns: repeat(6,1fr); gap: 4px; }
     .footer-stat { text-align: center; }
     .fs-val { font-size: 16px; font-weight: 800; color: var(--text); line-height: 1; }
     .fs-lab { font-size: 9px; color: var(--text-2); margin-top: 3px; }
@@ -262,20 +261,6 @@
     </div>
   </div>
 
-  <!-- GUIDANCE -->
-  <div class="card">
-    <div class="card-header">
-      <span class="card-icon">⚖️</span>
-      <div class="card-header-text">
-        <h2>Fluid Balance Guidance</h2>
-        <p>Target 2–3%/day weight loss · 85% incubator humidity</p>
-      </div>
-    </div>
-    <div class="card-body" id="guidance-body">
-      <div class="guidance-placeholder">Enter gestational age &amp; urine output above</div>
-    </div>
-  </div>
-
   <!-- INFUSIONS -->
   <div class="card">
     <div class="card-header">
@@ -333,22 +318,47 @@
         <div class="ref-row"><span>29–30 weeks</span><span>~18–22</span></div>
         <div class="ref-row"><span>&gt;30 weeks</span><span>~10–15</span></div>
       </div>
+
+      <div class="ref-section">
+        <div class="ref-title" style="color:#0e7490;">Hep + NaHCO₃ (HepBicarb) — per 100 mL</div>
+        <div class="ref-row"><span>Sodium</span><span>7.5 mmol</span></div>
+        <div class="ref-row"><span>Bicarbonate</span><span>7.5 mmol</span></div>
+        <div class="ref-row"><span>Heparin</span><span>1 unit/mL</span></div>
+        <div class="ref-row"><span>Glucose</span><span>0 g</span></div>
+        <div class="ref-row"><span>Calories</span><span>0 kcal</span></div>
+      </div>
       <p style="font-size:10px;color:var(--text-3);margin-top:8px;">Ågren et al. 2022 · Dereddy et al. 2025 (interpolated to 85% RH)</p>
     </div>
   </div>
 
-</div>
 
-<!-- STICKY FOOTER -->
-<div class="sticky-footer">
-  <div class="footer-label">Totals per kg per day</div>
-  <div class="footer-totals">
-    <div class="footer-stat"><div class="fs-val" id="ft-vol">—</div><div class="fs-lab">ml/kg/d</div></div>
-    <div class="footer-stat"><div class="fs-val" id="ft-na">—</div><div class="fs-lab">Na mmol</div></div>
-    <div class="footer-stat"><div class="fs-val" id="ft-glu">—</div><div class="fs-lab">Glu g</div></div>
-    <div class="footer-stat"><div class="fs-val" id="ft-gir">—</div><div class="fs-lab">GIR mg/min</div></div>
-    <div class="footer-stat"><div class="fs-val" id="ft-kcal">—</div><div class="fs-lab">kcal</div></div>
+  <!-- TOTALS BAR -->
+  <div class="card inline-totals-card">
+    <div class="footer-label" style="padding:10px 16px 0">Totals per kg per day</div>
+    <div class="footer-totals" style="padding:8px 12px 12px">
+      <div class="footer-stat"><div class="fs-val" id="ft-vol">—</div><div class="fs-lab">ml/kg/d</div></div>
+      <div class="footer-stat"><div class="fs-val" id="ft-na">—</div><div class="fs-lab">Na mmol</div></div>
+      <div class="footer-stat"><div class="fs-val" id="ft-glu">—</div><div class="fs-lab">Glu g</div></div>
+      <div class="footer-stat"><div class="fs-val" id="ft-gir">—</div><div class="fs-lab">GIR mg/min</div></div>
+      <div class="footer-stat"><div class="fs-val" id="ft-kcal">—</div><div class="fs-lab">kcal</div></div>
+      <div class="footer-stat"><div class="fs-val" id="ft-bicarb">—</div><div class="fs-lab">HCO₃ mmol</div></div>
+    </div>
   </div>
+
+  <!-- GUIDANCE -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-icon">⚖️</span>
+      <div class="card-header-text">
+        <h2>Fluid Balance Guidance</h2>
+        <p>Target 2–3%/day weight loss · 85% incubator humidity</p>
+      </div>
+    </div>
+    <div class="card-body" id="guidance-body">
+      <div class="guidance-placeholder">Enter gestational age &amp; urine output above</div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -365,6 +375,7 @@ var FLUIDS = {
   nacl045:   { label:'NaCl 0.45%',               cat:'fluid', na:7.7,  glucose:0,    aa:0,   fat:0,   kcal:0     },
   nacl018:   { label:'NaCl 0.18%',               cat:'fluid', na:3.08, glucose:0,    aa:0,   fat:0,   kcal:0     },
   hepsaline: { label:'Hep Saline (0.45% NaCl)',  cat:'fluid', na:7.7,  glucose:0,    aa:0,   fat:0,   kcal:0     },
+  hepbicarb: { label:'Hep + NaHCO₃ (HepBicarb)',  cat:'fluid', na:7.5,  glucose:0,    aa:0,   fat:0,   kcal:0,    bicarb:7.5  },
   d5_n09:    { label:'D5% + NaCl 0.9%',          cat:'fluid', na:15.4, glucose:5.0,  aa:0,   fat:0,   kcal:17.0  },
   d5_n045:   { label:'D5% + NaCl 0.45%',         cat:'fluid', na:7.7,  glucose:5.0,  aa:0,   fat:0,   kcal:17.0  },
   d5_n018:   { label:'D5% + NaCl 0.18%',         cat:'fluid', na:3.08, glucose:5.0,  aa:0,   fat:0,   kcal:17.0  },
@@ -482,7 +493,7 @@ function buildOptions() {
     {label:'Parenteral Nutrition', keys:['cspn1','cspn2']},
     {label:'Lipid', keys:['smof20']},
     {label:'Dextrose', keys:['d2_5','d5','d10','d12_5','d15']},
-    {label:'Saline', keys:['nacl09','nacl045','nacl018','hepsaline']},
+    {label:'Saline', keys:['nacl09','nacl045','nacl018','hepsaline','hepbicarb']},
     {label:'Dextrose+Saline', keys:['d5_n09','d5_n045','d5_n018','d10_n09','d10_n045','d10_n018','d2_5_n09','d2_5_n045']},
     {label:'Enteral', keys:['bm_maternal','bm_donor','bm_maternal_fort','bm_donor_fort','nutriprem1','nutriprem2']},
     {label:'Other', keys:['custom']},
@@ -600,37 +611,38 @@ var catBadge = {pn:'badge-pn',lipid:'badge-lipid',fluid:'badge-fluid',milk:'badg
 
 function recalcAll() {
   var cards = document.querySelectorAll('.infusion-card');
-  var rows=[], totVol=0, totNa=0, totGlu=0, totKcal=0;
+  var rows=[], totVol=0, totNa=0, totGlu=0, totKcal=0, totBicarb=0;
   cards.forEach(function(card) {
     var id = parseInt(card.id.replace('inf-',''));
     var fl = getFluid(id); if(!fl) return;
     var vol = getVolKgDay(id); if(!vol) return;
-    var naD=fl.na*(vol/100), gluD=fl.glucose*(vol/100), kcalD=fl.kcal*(vol/100);
-    totVol+=vol; totNa+=naD; totGlu+=gluD; totKcal+=kcalD;
+    var naD=fl.na*(vol/100), gluD=fl.glucose*(vol/100), kcalD=fl.kcal*(vol/100), bicarbD=(fl.bicarb||0)*(vol/100);
+    totVol+=vol; totNa+=naD; totGlu+=gluD; totKcal+=kcalD; totBicarb+=bicarbD;
     var flEl = document.getElementById('fl-'+id);
-    rows.push({id:id, fl:fl, vol:vol, naD:naD, gluD:gluD, kcalD:kcalD, key: flEl ? (flEl.value||'custom') : 'custom'});
+    rows.push({id:id, fl:fl, vol:vol, naD:naD, gluD:gluD, kcalD:kcalD, bicarbD:bicarbD, key: flEl ? (flEl.value||'custom') : 'custom'});
   });
   var setF = function(elId, v, d) {
     var el = document.getElementById(elId);
     if(el) el.textContent = rows.length ? v.toFixed(d===undefined?1:d) : '—';
   };
   setF('ft-vol',totVol,1); setF('ft-na',totNa,2); setF('ft-glu',totGlu,2);
-  setF('ft-gir',totGlu*1000/1440,2); setF('ft-kcal',totKcal,1);
-  renderBreakdown(rows, totVol, totNa, totGlu, totKcal);
+  setF('ft-gir',totGlu*1000/1440,2); setF('ft-kcal',totKcal,1); setF('ft-bicarb',totBicarb,2);
+  renderBreakdown(rows, totVol, totNa, totGlu, totKcal, totBicarb);
   renderGuidance(totVol, rows);
   saveState();
 }
 
-function renderBreakdown(rows, totVol, totNa, totGlu, totKcal) {
+function renderBreakdown(rows, totVol, totNa, totGlu, totKcal, totBicarb) {
+  totBicarb=totBicarb||0;
   var el = document.getElementById('breakdown-table');
   if(!rows.length) { el.innerHTML='<p style="font-size:13px;color:var(--text-3);">Add infusions to see breakdown</p>'; return; }
   var totGIR = totGlu*1000/1440;
   var trs = rows.map(function(r) {
     var lbl = (r.key==='custom' ? 'Custom' : (FLUIDS[r.key] && FLUIDS[r.key].label)) || 'Custom';
     var cb = catBadge[r.fl.cat]||'badge-fluid';
-    return '<tr><td><span class="badge '+cb+'">'+lbl+'</span></td><td>'+r.vol.toFixed(1)+'</td><td>'+r.naD.toFixed(2)+'</td><td>'+r.gluD.toFixed(2)+'</td><td>'+(r.gluD*1000/1440).toFixed(2)+'</td><td>'+r.kcalD.toFixed(1)+'</td></tr>';
+    return '<tr><td><span class="badge '+cb+'">'+lbl+'</span></td><td>'+r.vol.toFixed(1)+'</td><td>'+r.naD.toFixed(2)+'</td><td>'+r.gluD.toFixed(2)+'</td><td>'+(r.gluD*1000/1440).toFixed(2)+'</td><td>'+r.kcalD.toFixed(1)+'</td><td>'+(r.bicarbD||0).toFixed(2)+'</td></tr>';
   }).join('');
-  el.innerHTML = '<table class="results-table"><thead><tr><th>Fluid</th><th>ml/kg/d</th><th>Na</th><th>Glu g</th><th>GIR</th><th>kcal</th></tr></thead><tbody>'+trs+'<tr class="total-row"><td>TOTAL</td><td>'+totVol.toFixed(1)+'</td><td>'+totNa.toFixed(2)+'</td><td>'+totGlu.toFixed(2)+'</td><td>'+totGIR.toFixed(2)+'</td><td>'+totKcal.toFixed(1)+'</td></tr></tbody></table>';
+  el.innerHTML = '<table class="results-table"><thead><tr><th>Fluid</th><th>ml/kg/d</th><th>Na</th><th>Glu g</th><th>GIR</th><th>kcal</th><th>HCO₃</th></tr></thead><tbody>'+trs+'<tr class="total-row"><td>TOTAL</td><td>'+totVol.toFixed(1)+'</td><td>'+totNa.toFixed(2)+'</td><td>'+totGlu.toFixed(2)+'</td><td>'+totGIR.toFixed(2)+'</td><td>'+totKcal.toFixed(1)+'</td><td>'+totBicarb.toFixed(2)+'</td></tr></tbody></table>';
 }
 
 function renderGuidance(totalIntake, rows) {
@@ -675,7 +687,18 @@ function renderGuidance(totalIntake, rows) {
   if (pnFloor > 0 && tgtHigh !== null && tgtHigh < pnFloor) {
     tgtHigh = pnFloor; floorApplied = true;
   }
-  var hasIntake = totalIntake>0;
+  var hasIntake = totalIntake > 0;
+  // Target box colour: green=on target, amber=within 10, red=>10 off
+  var tgtBoxCls;
+  if (!hasIntake || tgtLow === null) {
+    tgtBoxCls = 'stat-green';
+  } else if (totalIntake >= tgtLow && totalIntake <= tgtHigh) {
+    tgtBoxCls = 'stat-green';
+  } else if (totalIntake >= tgtLow - 10 && totalIntake <= tgtHigh + 10) {
+    tgtBoxCls = 'stat-amber';
+  } else {
+    tgtBoxCls = 'stat-red';
+  }
   var balance = (hasIntake && totalLosses) ? totalIntake-totalLosses : null;
   var wPct = balance!==null ? balance/10 : null;
   var status = null;
@@ -691,7 +714,7 @@ function renderGuidance(totalIntake, rows) {
   html += '<div class="stat-box '+iwlCls+'"><div class="stat-label">IWL at 85% humidity</div><div class="stat-value">'+iwl+'</div><div class="stat-unit">ml/kg/day ('+ga+'w)</div><div class="stat-source">'+src+'</div></div>';
   if(hasUO) {
     html += '<div class="stat-box"><div class="stat-label">Total Losses</div><div class="stat-value">'+totalLosses.toFixed(0)+'</div><div class="stat-unit">ml/kg/day (UO+IWL)</div></div>';
-    html += '<div class="stat-box stat-green stat-wide"><div class="stat-label">Target intake for 2–3%/day loss</div><div class="stat-value">'+tgtLow+'–'+tgtHigh+' ml/kg/day</div><div class="stat-unit">'+(floorApplied?'&#9873; Floored at PN+Lipid minimum for Day '+dol+' — nutritional floor takes precedence over fluid restriction':'Deficit of 20–30 ml/kg/day from total losses')+'</div></div>';
+    html += '<div class="stat-box ' + tgtBoxCls + ' stat-wide"><div class="stat-label">Target intake for 2–3%/day loss</div><div class="stat-value">'+tgtLow+'–'+tgtHigh+' ml/kg/day</div><div class="stat-unit">'+(floorApplied?'&#9873; Floored at PN+Lipid minimum for Day '+dol+' — nutritional floor takes precedence over fluid restriction':'Deficit of 20–30 ml/kg/day from total losses')+'</div></div>';
   } else {
     html += '<div class="stat-box"><div class="stat-label">Urine Output</div><div class="stat-value" style="font-size:14px;padding-top:4px">Enter above</div><div class="stat-unit">Required for target calc</div></div>';
   }
